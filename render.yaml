@@ -5,11 +5,15 @@ services:
     plan: starter
     autoDeploy: true
     healthCheckPath: /api/health
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: UI_PORT
-        value: 5001
+        value: "5001"
       - key: EPHEMERAL_TTL_MS
-        value: 900000 # 15 minutes in-memory retention
+        value: "900000" # 15 minutes in-memory retention
+      - key: NODE_ENV
+        value: production
 
