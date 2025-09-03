@@ -16,7 +16,7 @@ COPY web-ui ./web-ui
 
 # Install web-ui dependencies
 WORKDIR /app/web-ui
-RUN echo "=== Installing web-ui dependencies ===" && npm install --omit=dev --verbose
+RUN echo "=== Installing web-ui dependencies ===" && npm ci --omit=dev --verbose
 
 # Back to root and clean up
 WORKDIR /app
