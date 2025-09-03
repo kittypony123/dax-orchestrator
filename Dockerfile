@@ -1,10 +1,10 @@
-FROM node:22-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
 # Copy only package.json (not package-lock.json) to avoid version conflicts
 COPY package.json ./
-RUN echo "=== Installing root dependencies ===" && npm install
+RUN rm -f package-lock.json && echo "=== Installing root dependencies ===" && npm install --no-package-lock
 
 # Copy and build main project
 COPY tsconfig.json ./
