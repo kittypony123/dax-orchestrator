@@ -298,6 +298,6 @@ async function runOrchestration(id) {
   }
 }
 
-app.listen(PORT, () => {
-  console.log(`Orchestrator UI running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Orchestrator UI running on http://0.0.0.0:${PORT}`);
 });
