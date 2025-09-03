@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.d.ts
+
+# Generated files
+coverage/
+*.generated.*
+
+# Logs
+*.log
+logs/
+
+# Configuration that shouldn't be formatted
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Binary files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.pdf
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project specific ignores
+comprehensive-analysis.md
+unified-report.md
+comprehensive-analysis_*.md
+comprehensive-analysis_*.json

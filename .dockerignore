@@ -1,0 +1,14 @@
+node_modules
+web-ui/node_modules
+archive
+runs
+tmp-uploads
+coverage
+logs
+dist
+web-app
+docs
+sample-data
+.git
+.gitignore
+**/*.log
