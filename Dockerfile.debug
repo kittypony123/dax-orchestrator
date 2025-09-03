@@ -1,0 +1,96 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install build essentials with verbose output
+RUN echo "=== Installing system dependencies ===" && \
+    apt-get update && \
+    apt-get install -y python3 make g++ curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    echo "=== System dependencies installed ==="
+
+# Verify Node and npm versions
+RUN echo "=== Node/npm versions ===" && \
+    node --version && \
+    npm --version && \
+    echo "=== Versions verified ==="
+
+# Copy package.json only first (for better caching)
+COPY package.json ./
+RUN echo "=== Package.json contents ===" && \
+    cat package.json && \
+    echo "=== End package.json ==="
+
+# Test npm cache and install
+RUN echo "=== Clearing npm cache ===" && \
+    npm cache clean --force && \
+    echo "=== Installing dependencies ===" && \
+    npm install --verbose --no-audit --no-fund 2>&1 && \
+    echo "=== Dependencies installed ==="
+
+# List installed packages
+RUN echo "=== Installed packages ===" && \
+    npm list --depth=0 && \
+    echo "=== End package list ==="
+
+# Copy source files
+COPY tsconfig.json ./
+COPY src ./src
+RUN echo "=== Source files copied ===" && \
+    ls -la src/ | head -10 && \
+    echo "=== End source listing ==="
+
+# Test TypeScript compilation
+RUN echo "=== Building TypeScript ===" && \
+    npm run build 2>&1 && \
+    echo "=== TypeScript build complete ==="
+
+# Verify dist directory
+RUN echo "=== Dist directory ===" && \
+    ls -la dist/ | head -10 && \
+    test -f dist/agent-orchestrator.js && \
+    echo "=== Dist verified ==="
+
+# Copy web-ui
+COPY web-ui ./web-ui
+RUN echo "=== Web-ui contents before fix ===" && \
+    cat web-ui/package.json && \
+    echo "=== End web-ui package.json ==="
+
+# Fix web-ui package.json and install
+WORKDIR /app/web-ui
+RUN echo "=== Fixing web-ui dependencies ===" && \
+    sed -i '/\"dax-catalog-mvp\":/d' package.json && \
+    echo "=== Web-ui package.json after fix ===" && \
+    cat package.json && \
+    echo "=== Installing web-ui dependencies ===" && \
+    rm -f package-lock.json && \
+    npm cache clean --force && \
+    npm install --production --verbose --no-audit --no-fund 2>&1 && \
+    echo "=== Web-ui dependencies installed ==="
+
+# Test server.js can load
+WORKDIR /app
+RUN echo "=== Testing server.js load ===" && \
+    node -e "console.log('Testing AgentOrchestrator import...'); const orch = require('./dist/agent-orchestrator'); console.log('Success:', Object.keys(orch));" && \
+    echo "=== Server.js test complete ==="
+
+# Setup runtime environment
+RUN echo "=== Setting up runtime ===" && \
+    cp -r dist/* web-ui/ 2>/dev/null || true && \
+    mkdir -p runs tmp-uploads web-ui/runs web-ui/tmp-uploads && \
+    echo "=== Runtime setup complete ==="
+
+# Final verification
+RUN echo "=== Final verification ===" && \
+    test -f web-ui/server.js && \
+    test -f web-ui/agent-orchestrator.js && \
+    echo "=== All files present ==="
+
+EXPOSE 5001
+ENV PORT=5001
+ENV UI_PORT=5001
+ENV NODE_ENV=production
+
+CMD ["node", "web-ui/server.js"]
