@@ -2,31 +2,31 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files first for dependency installation
+# Copy package files for dependency caching
 COPY package*.json ./
-COPY web-ui/package*.json ./web-ui/
-
-# Install dependencies
 RUN npm ci
-RUN cd web-ui && npm ci --omit=dev
 
-# Copy source code and build
+# Copy and build main project
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
 
-# Copy web-ui files explicitly to ensure they're included
-COPY web-ui/server.js ./web-ui/
-COPY web-ui/public ./web-ui/public
+# Copy entire web-ui directory to avoid path issues
+COPY web-ui ./web-ui
 
-# Create necessary directories
-RUN mkdir -p runs tmp-uploads
+# Install web-ui dependencies
+WORKDIR /app/web-ui
+RUN npm ci --omit=dev
 
-# Remove dev dependencies from root to save space
+# Back to root and clean up
+WORKDIR /app
 RUN npm prune --omit=dev
 
-# Verify files are copied (for debugging)
-RUN ls -la web-ui/public/
+# Create runtime directories
+RUN mkdir -p runs tmp-uploads
+
+# Debug: Verify all files are present
+RUN echo "=== Web-UI Directory Structure ===" && find web-ui -type f -name "*.html" -o -name "*.js" -o -name "*.css" | head -10
 
 EXPOSE 5001
 ENV PORT=5001
