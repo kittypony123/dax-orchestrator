@@ -1,22 +1,22 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
 # Copy package files for dependency caching
 COPY package*.json ./
-RUN npm ci
+RUN echo "=== Installing root dependencies ===" && npm ci
 
 # Copy and build main project
 COPY tsconfig.json ./
 COPY src ./src
-RUN npm run build
+RUN echo "=== Building TypeScript ===" && npm run build
 
 # Copy entire web-ui directory to avoid path issues
 COPY web-ui ./web-ui
 
 # Install web-ui dependencies
 WORKDIR /app/web-ui
-RUN npm ci --omit=dev
+RUN echo "=== Installing web-ui dependencies ===" && npm install --omit=dev --verbose
 
 # Back to root and clean up
 WORKDIR /app
