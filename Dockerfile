@@ -2,21 +2,21 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Copy package files for dependency caching
-COPY package*.json ./
-RUN echo "=== Installing root dependencies ===" && npm ci
+# Copy only package.json (not package-lock.json) to avoid version conflicts
+COPY package.json ./
+RUN echo "=== Installing root dependencies ===" && npm install
 
 # Copy and build main project
 COPY tsconfig.json ./
 COPY src ./src
 RUN echo "=== Building TypeScript ===" && npm run build
 
-# Copy entire web-ui directory to avoid path issues
+# Copy web-ui directory
 COPY web-ui ./web-ui
 
-# Install web-ui dependencies
+# Install web-ui dependencies (copy only package.json to avoid lock file issues)
 WORKDIR /app/web-ui
-RUN echo "=== Installing web-ui dependencies ===" && npm ci --omit=dev --verbose
+RUN rm -f package-lock.json && echo "=== Installing web-ui dependencies ===" && npm install --omit=dev --verbose
 
 # Back to root and clean up
 WORKDIR /app
