@@ -1,0 +1,309 @@
+RENDER BUILD ERROR FIXES
+========================
+Date: September 3, 2025
+Error: npm install failing with exit code 1 during Docker build on Render
+
+PROBLEM IDENTIFIED
+------------------
+The build is failing during the npm install step in the Docker build. The error shows:
+"error: failed to solve: process "/bin/sh -c echo \"=== Installing root dependencies ===\" && npm install" did not complete successfully: exit code: 1"
+
+ROOT CAUSES
+-----------
+1. Alpine Linux (node:22-alpine) doesn't include Python and build tools by default
+2. Some npm packages require compilation tools
+3. The web-ui package.json has a problematic file dependency: "dax-catalog-mvp": "file:.."
+4. Possible memory constraints during build
+
+SOLUTIONS
+=========
+
+SOLUTION 1: Fixed Alpine Dockerfile (Recommended)
+--------------------------------------------------
+Save as: Dockerfile
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Install Python and build tools (needed for some npm packages)
+RUN apk add --no-cache python3 make g++ py3-pip
+
+# Copy package files first (better caching)
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Install root dependencies with verbose logging and retry logic
+RUN echo "=== Installing root dependencies ===" && \
+    npm cache clean --force && \
+    npm install --verbose --no-audit --no-fund || \
+    (npm cache clean --force && npm install --verbose --no-audit --no-fund)
+
+# Copy and build main project
+COPY src ./src
+RUN echo "=== Building TypeScript ===" && npm run build
+
+# Copy web-ui directory
+COPY web-ui ./web-ui
+
+# Fix web-ui dependencies and install
+WORKDIR /app/web-ui
+RUN echo "=== Preparing web-ui ===" && \
+    # Remove the problematic file dependency
+    sed -i '/"dax-catalog-mvp":/d' package.json && \
+    rm -f package-lock.json && \
+    echo "=== Installing web-ui dependencies ===" && \
+    npm cache clean --force && \
+    npm install --omit=dev --verbose --no-audit --no-fund
+
+# Ensure the compiled dist is accessible
+WORKDIR /app
+RUN echo "=== Setting up runtime environment ===" && \
+    # Copy necessary files from dist to where server.js expects them
+    cp -r dist/* web-ui/ 2>/dev/null || true && \
+    # Clean up dev dependencies
+    npm prune --omit=dev && \
+    # Create runtime directories
+    mkdir -p runs tmp-uploads web-ui/runs web-ui/tmp-uploads
+
+# Verify critical files exist
+RUN echo "=== Verifying build ===" && \
+    test -f web-ui/server.js || (echo "ERROR: server.js not found" && exit 1) && \
+    test -d dist || (echo "WARNING: dist directory not found" && exit 0) && \
+    ls -la web-ui/ && \
+    echo "=== Build verification complete ==="
+
+EXPOSE 5001
+ENV PORT=5001
+ENV UI_PORT=5001
+ENV NODE_ENV=production
+
+# Use exec form to ensure proper signal handling
+CMD ["node", "web-ui/server.js"]
+```
+
+SOLUTION 2: Debian-based Dockerfile (Most Compatible)
+------------------------------------------------------
+Save as: Dockerfile.debian
+
+```dockerfile
+FROM node:22-slim
+
+WORKDIR /app
+
+# Install build essentials (if needed by any npm packages)
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Install dependencies with clean cache
+RUN npm cache clean --force && \
+    npm install --verbose
+
+# Copy and build source
+COPY src ./src
+RUN npm run build
+
+# Copy web-ui
+COPY web-ui ./web-ui
+
+# Fix and install web-ui dependencies
+WORKDIR /app/web-ui
+RUN sed -i '/"dax-catalog-mvp":/d' package.json && \
+    rm -f package-lock.json && \
+    npm cache clean --force && \
+    npm install --production --verbose
+
+# Setup runtime environment
+WORKDIR /app
+RUN cp -r dist/* web-ui/ 2>/dev/null || true && \
+    mkdir -p runs tmp-uploads web-ui/runs web-ui/tmp-uploads
+
+EXPOSE 5001
+ENV PORT=5001
+ENV UI_PORT=5001
+ENV NODE_ENV=production
+
+CMD ["node", "web-ui/server.js"]
+```
+
+SOLUTION 3: Minimal Debug Dockerfile
+-------------------------------------
+Save as: Dockerfile.debug
+
+```dockerfile
+# Ultra-minimal Dockerfile to isolate the issue
+FROM node:22
+
+WORKDIR /app
+
+# Just copy and install - no TypeScript build
+COPY package.json ./
+RUN npm install --verbose 2>&1 || (echo "Install failed, retrying..." && npm cache clean --force && npm install --verbose)
+
+# Copy everything else
+COPY . .
+
+# Try to build
+RUN npm run build || echo "Build failed but continuing..."
+
+# Ensure server can start
+WORKDIR /app/web-ui
+CMD ["node", "server.js"]
+```
+
+SOLUTION 4: Pre-built Code Dockerfile
+--------------------------------------
+Save as: Dockerfile.prebuild
+(Use this if you build locally and commit the dist folder)
+
+```dockerfile
+# For use when you build locally and commit dist folder
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Copy pre-built files
+COPY dist ./dist
+COPY web-ui ./web-ui
+COPY package*.json ./
+
+# Only install production dependencies
+RUN cd web-ui && \
+    sed -i '/"dax-catalog-mvp":/d' package.json && \
+    npm install --production
+
+# Create runtime directories
+RUN mkdir -p runs tmp-uploads web-ui/runs web-ui/tmp-uploads
+
+EXPOSE 5001
+ENV PORT=5001
+ENV UI_PORT=5001
+ENV NODE_ENV=production
+
+CMD ["node", "web-ui/server.js"]
+```
+
+UPDATED render.yaml
+-------------------
+Save as: render.yaml
+
+```yaml
+services:
+  - type: web
+    name: dax-orchestrator-ui
+    env: docker
+    plan: starter
+    autoDeploy: true
+    healthCheckPath: /api/health
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: UI_PORT
+        value: "5001"
+      - key: EPHEMERAL_TTL_MS
+        value: "900000" # 15 minutes in-memory retention
+      - key: NODE_ENV
+        value: production
+```
+
+OPTIMIZED BUILD SCRIPT FOR package.json
+----------------------------------------
+Add to your package.json scripts section:
+
+```json
+{
+  "scripts": {
+    "build": "node --max-old-space-size=2048 ./node_modules/.bin/tsc",
+    "build:prod": "NODE_ENV=production node --max-old-space-size=2048 ./node_modules/.bin/tsc"
+  }
+}
+```
+
+TESTING LOCALLY
+---------------
+Before pushing to Render, test locally:
+
+```bash
+# Clean your local environment
+docker system prune -a
+npm cache clean --force
+
+# Test Solution 1 (Alpine)
+docker build -t test-alpine -f Dockerfile .
+docker run -p 5001:5001 test-alpine
+
+# Test Solution 2 (Debian)
+docker build -t test-debian -f Dockerfile.debian .
+docker run -p 5001:5001 test-debian
+
+# If successful, push to Render
+git add Dockerfile render.yaml
+git commit -m "Fix Render build issues"
+git push
+```
+
+DEBUGGING STEPS
+---------------
+1. Check local build first (see commands above)
+2. View Render build logs:
+   - Go to Render dashboard
+   - Click on your service
+   - Go to "Events" or "Logs" tab
+   - Look for specific error messages
+
+3. Common error messages and fixes:
+   - "Cannot find module": Missing dependency or incorrect import path
+   - "ENOENT": File not found - check file paths and COPY commands
+   - "npm ERR!": Dependency installation failed
+   - "tsc: not found": TypeScript not installed correctly
+
+QUICK FIX CHECKLIST
+-------------------
+[ ] Replace Dockerfile with one of the fixed versions above
+[ ] Update render.yaml with explicit Docker configuration
+[ ] Test locally with Docker build
+[ ] Verify environment variables are set in Render dashboard
+[ ] Consider temporarily upgrading Render plan for more build resources
+[ ] Clear npm cache both locally and in Dockerfile
+[ ] Ensure .dockerignore is properly configured (yours looks good)
+
+ADDITIONAL CONSIDERATIONS
+-------------------------
+1. If builds continue to timeout:
+   - Consider using a GitHub Action to build and push to Docker Hub
+   - Then have Render pull the pre-built image
+
+2. For persistent npm install issues:
+   - Check if any packages require specific Node versions
+   - Review package-lock.json for conflicts
+   - Consider using npm ci instead of npm install for deterministic builds
+
+3. Memory issues during build:
+   - Upgrade Render plan temporarily during deployment
+   - Use the NODE_OPTIONS environment variable to increase memory
+
+RECOMMENDED ACTION PLAN
+------------------------
+1. Try Solution 2 (Debian-based) first - it has the best compatibility
+2. If that fails, try Solution 1 (Alpine with build tools)
+3. Use Solution 3 (Debug) to identify specific failing packages
+4. As last resort, use Solution 4 with local pre-building
+
+SUPPORT RESOURCES
+-----------------
+- Render Documentation: https://render.com/docs
+- Render Community: https://community.render.com
+- Docker Documentation: https://docs.docker.com
+
+---
+End of troubleshooting guide

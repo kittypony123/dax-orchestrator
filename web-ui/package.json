@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "dax-catalog-mvp": "file:..",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "multer": "^2.0.0"
