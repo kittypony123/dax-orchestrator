@@ -7,7 +7,7 @@ services:
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - UI_PORT=5001
-      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-3.5-sonnet}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-20250514}
     volumes:
       - runs:/app/runs
     healthcheck:

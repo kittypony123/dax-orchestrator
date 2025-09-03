@@ -41,7 +41,7 @@ export class AgentOrchestrator {
 
   constructor(config?: Partial<ClaudeConfig>) {
     this.claudeClient = new ClaudeClient({
-      model: config?.model ?? process.env.CLAUDE_MODEL ?? 'claude-3.5-sonnet',
+      model: config?.model ?? process.env.CLAUDE_MODEL ?? 'claude-sonnet-4-20250514',
       maxTokens: config?.maxTokens ?? 4000,
       timeout: config?.timeout ?? 120_000,
       ...(config || {})
