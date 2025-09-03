@@ -23,7 +23,7 @@ RUN npm cache clean --force && \
 # Verify build succeeded
 RUN test -f dist/agent-orchestrator.js || (echo "Build failed - agent-orchestrator.js missing" && exit 1)
 
-# Copy web-ui (including public directory)
+# Copy web-ui (including public directory)  
 COPY web-ui ./web-ui
 
 # Verify public directory was copied

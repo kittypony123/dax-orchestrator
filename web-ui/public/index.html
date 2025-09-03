@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DAX Catalog Orchestrator – Analyze</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
+  </head>
+  <body>
+    <aside class="nav-rail" aria-label="Primary">
+      <a class="logo-pill" href="#" aria-label="Home"><i data-lucide="sparkles"></i></a>
+      <nav>
+        <a class="item active" href="#" aria-current="page" title="Dashboard"><i data-lucide="layout-dashboard"></i><span class="label">Dashboard</span></a>
+        <a class="item" href="#" title="Catalog"><i data-lucide="book-open"></i><span class="label">Catalog</span></a>
+        <a class="item" href="#" title="Models"><i data-lucide="boxes"></i><span class="label">Models</span></a>
+        <a class="item" href="#" title="Tables"><i data-lucide="table"></i><span class="label">Tables</span></a>
+        <a class="item" href="#" title="Measures"><i data-lucide="function-square"></i><span class="label">Measures</span></a>
+        <a class="item" href="#" title="Lineage"><i data-lucide="git-branch"></i><span class="label">Lineage</span></a>
+        <a class="item" href="#" title="Glossary"><i data-lucide="list"></i><span class="label">Glossary</span></a>
+        <a class="item" href="#" title="Exports"><i data-lucide="download"></i><span class="label">Exports</span></a>
+      </nav>
+      <div class="spacer"></div>
+      <a class="item" href="#" title="Settings"><i data-lucide="settings"></i><span class="label">Settings</span></a>
+    </aside>
+    <div class="container">
+      <header>
+        <div class="brand">
+          <h1 class="brand-title"><span class="logo">📊</span><span>DAX Catalog</span></h1>
+          <p class="tagline">Upload CSVs • Analyze • Watch Progress • Download Artifacts</p>
+        </div>
+        <div class="search" role="search">
+          <div class="search-box">
+            <i data-lucide="search" class="icon" aria-hidden="true"></i>
+            <input type="search" placeholder="Search…" aria-label="Search" />
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="theme-toggle" class="ghost btn btn-ghost" aria-label="Toggle theme"><span class="icon">🌙</span></button>
+        </div>
+      </header>
+
+      <section class="card">
+        <h2>Upload Files</h2>
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Drop CSV files or browse">
+          <div class="dz-inner">
+            <div class="dz-icon">⬆️</div>
+            <div class="dz-text">
+              <strong>Drop CSVs here</strong> or <button id="browse-btn" type="button" class="link">browse files</button>
+              <div class="dz-hint">Recognizes: measures.csv, tables.csv, columns.csv, relationships.csv</div>
+            </div>
+          </div>
+          <div id="dz-tags" class="dz-tags" aria-live="polite"></div>
+        </div>
+        <input id="file-picker" type="file" accept=".csv" multiple hidden />
+        <form id="analyze-form">
+          <div class="file-grid">
+            <label>measures.csv
+              <input type="file" name="measures" accept=".csv" />
+            </label>
+            <label>tables.csv
+              <input type="file" name="tables" accept=".csv" />
+            </label>
+            <label>columns.csv
+              <input type="file" name="columns" accept=".csv" />
+            </label>
+            <label>relationships.csv
+              <input type="file" name="relationships" accept=".csv" />
+            </label>
+          </div>
+          <p class="hint">All files optional. The pipeline will run with what’s provided.</p>
+          <button type="submit" class="primary btn btn-primary">Analyze Now</button>
+        </form>
+      </section>
+
+      <section class="card" id="progress-card" hidden>
+        <h2>Progress</h2>
+        <div class="status-row"><span id="status-pill" class="pill">Queued</span></div>
+        <ul id="events" class="timeline"></ul>
+      </section>
+
+      <section class="card" id="results-card" hidden>
+        <h2>Results</h2>
+        <div id="artifacts"></div>
+      </section>
+
+      <section class="card" id="report-card" hidden>
+        <div class="report-header">
+          <h2>Report</h2>
+          <div id="report-actions" class="actions" hidden>
+            <a id="open-report" class="btn btn-secondary" target="_blank" rel="noopener">Open Fullscreen</a>
+          </div>
+        </div>
+        <div id="report-frame-wrap" class="frame-wrap" hidden>
+          <div id="frame-skeleton" class="skeleton" aria-hidden="true"></div>
+          <iframe id="report-frame" title="Model Documentation"></iframe>
+        </div>
+        <div id="report-html" class="report-html" hidden></div>
+      </section>
+    </div>
+    <div id="toasts" aria-live="polite" aria-atomic="true"></div>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+    <script>
+      // Minimal Prism language definition for DAX
+      if (window.Prism) {
+        Prism.languages.dax = {
+          'comment': /(?:\/\/.*|\/\*[\s\S]*?\*\/)/,
+          'string': /"(?:\\.|[^"\\])*"/,
+          'number': /\b\d+(?:\.\d+)?\b/,
+          'column': /[A-Za-z_][A-Za-z0-9_]*\[[^\]]+\]/,
+          'function': /\b(?:CALCULATE|FILTER|SUMX|AVERAGEX|COUNTAX|DIVIDE|SUM|AVERAGE|MIN|MAX|VAR|RETURN|IF|SWITCH|RELATED|DATESINPERIOD|DATEADD|SAMEPERIODLASTYEAR|PARALLELPERIOD|COUNTROWS|ALL|ALLEXCEPT|SELECTEDVALUE|HASONEVALUE)\b/i,
+          'keyword': /\b(?:VAR|RETURN|TRUE|FALSE|AND|OR|NOT)\b/i,
+          'operator': /[+\-*/=<>^&]|&&|\|\|/,
+          'punctuation': /[()\[\]{},.:]/
+        };
+      }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/app.js"></script>
+  </body>
+  </html>
