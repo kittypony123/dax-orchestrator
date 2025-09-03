@@ -21,7 +21,8 @@ ENV NODE_ENV=production
 
 # Install production deps for orchestrator runtime
 COPY package*.json ./
-RUN npm ci --omit=dev
+# Install production deps without running lifecycle scripts (prepare would try to run tsc)
+RUN npm ci --omit=dev --ignore-scripts
 
 # Copy built orchestrator and UI
 COPY --from=builder /app/dist ./dist
@@ -34,4 +35,3 @@ RUN mkdir -p /app/runs /app/tmp-uploads
 EXPOSE 5001
 ENV UI_PORT=5001
 CMD ["node", "web-ui/server.js"]
-
