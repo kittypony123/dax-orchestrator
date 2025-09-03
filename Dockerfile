@@ -41,10 +41,7 @@ WORKDIR /app
 RUN mkdir -p runs tmp-uploads web-ui/runs web-ui/tmp-uploads
 
 # Verify server can start (import test)
-RUN node -e "
-const orch = require('./dist/agent-orchestrator'); 
-console.log('✅ AgentOrchestrator loaded:', Object.keys(orch));
-"
+RUN node -e "const orch = require('./dist/agent-orchestrator'); console.log('AgentOrchestrator loaded:', Object.keys(orch));"
 
 EXPOSE 5001
 ENV PORT=5001
