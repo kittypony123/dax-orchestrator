@@ -23,8 +23,11 @@ RUN npm cache clean --force && \
 # Verify build succeeded
 RUN test -f dist/agent-orchestrator.js || (echo "Build failed - agent-orchestrator.js missing" && exit 1)
 
-# Copy web-ui
+# Copy web-ui (including public directory)
 COPY web-ui ./web-ui
+
+# Verify public directory was copied
+RUN test -f web-ui/public/index.html || (echo "ERROR: web-ui/public/index.html missing" && exit 1)
 
 # Fix web-ui dependencies and install
 WORKDIR /app/web-ui
