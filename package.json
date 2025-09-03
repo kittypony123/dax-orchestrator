@@ -29,8 +29,7 @@
     "legacy-cli": "ts-node src/cli.ts",
     "start": "node dist/enhanced-cli.js",
     "validate": "npm run typecheck && npm run lint:check && npm run test",
-    "prepare": "npm run build"
-    ,
+    "prepare": "npm run build",
     "ui:setup": "npm --prefix web-ui install",
     "ui:start": "npm --prefix web-ui start",
     "ui:dev": "npm run build && npm --prefix web-ui install && npm --prefix web-ui start"
