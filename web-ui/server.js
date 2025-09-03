@@ -141,6 +141,11 @@ function scheduleCleanup(id) {
 // Routes
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+// Serve the main UI
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // SSE progress stream
 app.get('/api/progress/:id', (req, res) => {
   const { id } = req.params;
