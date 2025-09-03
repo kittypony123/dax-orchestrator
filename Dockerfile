@@ -13,13 +13,12 @@ RUN apt-get update && apt-get install -y \
 COPY package.json ./
 COPY tsconfig.json ./
 
+# Copy source BEFORE installing (needed for prepare script)
+COPY src ./src
+
 # Install dependencies fresh (no package-lock.json)
 RUN npm cache clean --force && \
     npm install --no-package-lock --verbose
-
-# Copy and build source
-COPY src ./src
-RUN npm run build
 
 # Verify build succeeded
 RUN test -f dist/agent-orchestrator.js || (echo "Build failed - agent-orchestrator.js missing" && exit 1)
