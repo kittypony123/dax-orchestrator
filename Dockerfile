@@ -11,10 +11,8 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN echo "=== Building TypeScript ===" && npm run build
 
-# Copy web-ui directory
+# Copy web-ui directory and install its dependencies
 COPY web-ui ./web-ui
-
-# Install web-ui dependencies (copy only package.json to avoid lock file issues)
 WORKDIR /app/web-ui
 RUN rm -f package-lock.json && echo "=== Installing web-ui dependencies ===" && npm install --omit=dev --verbose
 
