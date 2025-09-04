@@ -395,22 +395,24 @@ RULES:
         <div style="font-weight:700; font-size:1.4rem; margin-top:.35rem;">${esc(value)}</div>
       </div>`.trim();
 
-    const measureCard = (m: any) => `
-      <div style="border:1px solid #e5e7eb; border-radius:8px; padding:1rem;">
-        <div style="font-weight:600; margin-bottom:.35rem;">${esc(m.name)}</div>
-        <div style="font-size:.95rem; color:#374151; margin-bottom:.5rem;">${esc(m.purpose || '—')}</div>
-        ${m.whenToUse ? `<div style="font-size:.8rem; color:#6b7280; margin-bottom:.5rem;"><strong>When to use:</strong> ${esc(m.whenToUse)}</div>` : ''}
-        <pre style="background:#f8fafc; padding:.75rem; border-radius:6px; overflow:auto; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.85rem; margin:0 0 .5rem 0;">${esc(m.formula)}</pre>
-        <div style="font-size:.8rem; color:#6b7280; margin-bottom:.5rem;">Complexity: ${esc(m.complexity)}</div>
-        ${m.risks?.length ? `<ul style="margin:.25rem 0 0 1rem;">${m.risks.map((r: string)=>`<li>${esc(r)}</li>`).join('')}</ul>` : ''}
-        ${(m.enhancedFixes || m.fixes)?.length ? `<details style="margin-top:.5rem;"><summary style="cursor:pointer;">Suggested fixes</summary>${(m.enhancedFixes || m.fixes).map((f:any)=>`
-          <div style="margin-top:.5rem;">
-            <div style="font-weight:500;">${esc(f.title)}</div>
-            ${f.rationale ? `<div style="font-size:.9rem; color:#374151; margin:.25rem 0;">${esc(f.rationale)}</div>` : ''}
-            ${f.impact ? `<div style="font-size:.8rem; margin:.25rem 0;"><span style="color:#10b981;">Impact:</span> ${esc(f.impact)} | <span style="color:#f59e0b;">Effort:</span> ${esc(f.implementationEffort || 'Low')} | <span style="color:#3b82f6;">Benefit:</span> ${esc(f.businessBenefit || 'Medium')}</div>` : ''}
-            <pre style="background:#f1f5f9; padding:.6rem; border-radius:6px; overflow:auto; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.85rem;">${esc(f.fixedDax)}</pre>
-          </div>`).join('')}</details>` : ''}
-      </div>`.trim();
+    const measureRow = (m: any, index: number) => `
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="padding:12px; font-weight:600; text-align:center; width:4%;">${index + 1}</td>
+        <td style="padding:12px; font-weight:600; width:20%;">
+          ${esc(m.name)}
+          ${m.complexity ? `<br><small style="color:#6b7280; font-weight:normal;">Complexity: ${esc(m.complexity)}</small>` : ''}
+        </td>
+        <td style="padding:12px; color:#374151; width:25%;">${esc(m.purpose || m.description || 'No description')}</td>
+        <td style="padding:12px; font-size:.8rem; color:#6b7280; width:15%;">${m.whenToUse || 'General use'}</td>
+        <td style="padding:12px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.85rem; width:30%;">
+          <div style="background:#f8fafc; padding:.5rem; border-radius:4px; overflow:auto; max-height:100px;">
+            ${esc(m.formula || m.dax || 'No formula')}
+          </div>
+        </td>
+        <td style="padding:12px; text-align:center; width:6%;">
+          ${m.risks?.length ? `<span style="color:#ef4444;">⚠️</span>` : `<span style="color:#10b981;">✓</span>`}
+        </td>
+      </tr>`.trim();
 
     const tableCard = (t: any) => `
       <div style="border:1px solid #e5e7eb; border-radius:8px; padding:1rem;">
@@ -443,9 +445,23 @@ RULES:
   </header>
 
   <section style="margin-bottom:20px;">
-    <h2 style="font-size:1.25rem; margin:0 0 8px 0;">Key Measures</h2>
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px;">
-      ${r.measures.map(measureCard).join('')}
+    <h2 style="font-size:1.25rem; margin:0 0 8px 0;">DAX Measures (${r.measures?.length || 0} total)</h2>
+    <div style="overflow-x:auto; border:1px solid #e5e7eb; border-radius:8px;">
+      <table style="width:100%; border-collapse:collapse; background:white;">
+        <thead style="background:#f8fafc;">
+          <tr>
+            <th style="padding:14px 12px; text-align:center; font-weight:700; font-size:.85rem; color:#374151; border-bottom:2px solid #e5e7eb;">#</th>
+            <th style="padding:14px 12px; text-align:left; font-weight:700; font-size:.85rem; color:#374151; border-bottom:2px solid #e5e7eb;">Measure Name</th>
+            <th style="padding:14px 12px; text-align:left; font-weight:700; font-size:.85rem; color:#374151; border-bottom:2px solid #e5e7eb;">Business Purpose</th>
+            <th style="padding:14px 12px; text-align:left; font-weight:700; font-size:.85rem; color:#374151; border-bottom:2px solid #e5e7eb;">Usage Context</th>
+            <th style="padding:14px 12px; text-align:left; font-weight:700; font-size:.85rem; color:#374151; border-bottom:2px solid #e5e7eb;">DAX Formula</th>
+            <th style="padding:14px 12px; text-align:center; font-weight:700; font-size:.85rem; color:#374151; border-bottom:2px solid #e5e7eb;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${r.measures.map(measureRow).join('')}
+        </tbody>
+      </table>
     </div>
   </section>
 
