@@ -315,53 +315,55 @@ function renderJsonReport(data) {
     `);
   }
 
-  // Business Guidance
-  if (business && (business.measureGuidance || business.cadenceRecommendations)) {
-    const mg = (business.measureGuidance || []).slice(0, 8).map(m => `
-      <div class="card-mini">
-        <div class="title">${safe(m.name || '', '')}</div>
-        ${m.whenToUse ? `<div class="muted">${m.whenToUse}</div>` : ''}
-        ${m.successIndicators ? `<div class="tags">${Array.isArray(m.successIndicators)? m.successIndicators.join(', ') : m.successIndicators}</div>` : ''}
-      </div>
-    `).join('');
-    if (mg) {
-      parts.push(`
-        <section>
-          <h4>Business Usage Guidance</h4>
-          <div class="grid">${mg}</div>
-        </section>
-      `);
-    }
-  }
+  // Business Guidance - Removed card display, measures will show in table only
 
-  // Measures Table (rows)
+  // Measures Table (rows) - Enhanced display
   if (measures.length) {
-    const rows = measures.slice(0, 200).map(m => {
+    const rows = measures.slice(0, 200).map((m, index) => {
       const name = safe(m.name || m.measureName || 'Measure');
       const desc = safe(m.businessMeaning || m.description || m.purpose || '', '');
       const folder = safe(m.folder || m.displayFolder || '', '');
       const dax = safe(m.dax || m.formula || m.expression || '', '');
+      const dataType = safe(m.dataType || '', '');
+      const isVisible = m.isHidden === false || m.isHidden === undefined ? 'Visible' : 'Hidden';
+      
       return `
-        <tr>
-          <td class="cell-name"><div class="name">${name}</div></td>
-          <td class="cell-folder">${folder ? `<span class="badge">${folder}</span>` : ''}</td>
-          <td class="cell-desc">${desc ? `<span class="muted">${desc}</span>` : ''}</td>
-          <td class="cell-dax">${dax ? `<pre class=\"code language-dax\"><code class=\"language-dax\">${escapeHtml(dax)}</code></pre>` : ''}</td>
+        <tr class="measure-row">
+          <td class="cell-index">${index + 1}</td>
+          <td class="cell-name">
+            <div class="measure-name">${name}</div>
+            ${dataType ? `<small class="data-type">${dataType}</small>` : ''}
+          </td>
+          <td class="cell-folder">${folder ? `<span class="badge">${folder}</span>` : '<span class="muted">No folder</span>'}</td>
+          <td class="cell-desc">
+            <div class="description">${desc || '<span class="muted">No description</span>'}</div>
+          </td>
+          <td class="cell-dax">
+            ${dax ? `<div class="dax-container"><pre class="code language-dax"><code class="language-dax">${escapeHtml(dax)}</code></pre></div>` : '<span class="muted">No formula</span>'}
+          </td>
+          <td class="cell-visibility">
+            <span class="badge ${isVisible === 'Visible' ? 'success' : 'warn'}">${isVisible}</span>
+          </td>
         </tr>
       `;
     }).join('');
 
     parts.push(`
-      <section>
-        <h4>Measures</h4>
-        <div class="table-wrap">
+      <section class="measures-section">
+        <div class="section-header">
+          <h4>DAX Measures (${measures.length} total)</h4>
+          <p class="muted">All measures displayed in table format with complete details</p>
+        </div>
+        <div class="table-wrap measures-table-wrap">
           <table class="table measures-table">
             <thead>
               <tr>
-                <th style="width:18%">Name</th>
+                <th style="width:4%">#</th>
+                <th style="width:20%">Measure Name</th>
                 <th style="width:12%">Folder</th>
-                <th style="width:30%">Description</th>
-                <th style="width:40%">DAX</th>
+                <th style="width:25%">Business Description</th>
+                <th style="width:32%">DAX Formula</th>
+                <th style="width:7%">Status</th>
               </tr>
             </thead>
             <tbody>
